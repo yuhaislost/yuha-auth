@@ -9,6 +9,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { FormError } from '../formError';
+import { FormSuccess } from '../formSuccess';
+import axios, { AxiosError } from 'axios';
+import { useState, useTransition } from 'react';
 
 export const LoginForm = function()
 {
@@ -19,17 +23,37 @@ export const LoginForm = function()
             password: '',
         }
     });
+    
+    const [isPending, startTransition] = useTransition();
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+
+    async function onSubmit(values: z.infer<typeof LoginSchema>)
+    {
+        setError("");
+        setSuccess("");
+        startTransition(async () => {
+            try{
+                const res = await axios.post('/api/auth/login', values);
+                setSuccess(res.data);
+                console.log(res);
+            }catch(error: any)
+            {
+                setError(error.response.data);
+            }
+        });
+    }
 
     return (
         <CardWrapper headerLabel="Hi! Glad your back." backButtonLabel="Don't have an account?" backButtonHref="/auth/register" showSocial>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(() => {})} className='space-y-6'>
+                <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
                     <div className='space-y-4'>
                         <FormField control={form.control} name="email" render={({field}) => (
                             <FormItem>
                                 <FormLabel>Email</FormLabel>
                                 <FormControl>
-                                    <Input {...field} placeholder='example@domain.com'/>
+                                    <Input {...field} placeholder='example@domain.com' disabled={isPending}/>
                                 </FormControl>
                                 <FormMessage/>
                             </FormItem>
@@ -39,14 +63,16 @@ export const LoginForm = function()
                                 <FormItem>
                                     <FormLabel>Password</FormLabel>
                                     <FormControl>
-                                        <Input {...field} placeholder='******' type='password'/>
+                                        <Input {...field} placeholder='******' type='password' disabled={isPending}/>
                                     </FormControl>
                                     <FormMessage/>
                                 </FormItem>
                             )
                         }/>
                     </div>
-                    <Button type='submit' className='w-full'>
+                    <FormError message={error}/>
+                    <FormSuccess message={success}/>
+                    <Button type='submit' className='w-full' disabled={isPending}>
                         Login
                     </Button>
                 </form>
